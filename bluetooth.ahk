@@ -1,3 +1,5 @@
+#SingleInstance force
+
 ; create bluetooth folder if not exists
 if not FileExist(A_ScriptDir "\bluetooth")
     FileCreateDir, %A_ScriptDir%\bluetooth
@@ -20,6 +22,14 @@ ObjIndexOf(obj, item, case_sensitive:=false)
 	}
     return 0
 }
+
+RestartService(){
+    ; RunWait, net stop "Bluetooth Support Service" /y, , Max
+    RunWait, net stop "Bluetooth Support Service" /y, , Hide
+    ; RunWait, net start "Bluetooth Support Service" /y, , Max
+    RunWait, net start "Bluetooth Support Service" /y, , Hide
+}
+
 ; export registry .reg files for all bluetooth devices
 RegGetKeys(RegPath) {
     Keys:=[]
@@ -59,6 +69,14 @@ BinaryToString(BinaryData){
 RegExport(RegPath, OutputFile) {
     RunWait, regedit /e "%OutputFile%" "%RegPath%"
 }
+
+ShowTooltip:
+    CoordMode, Tooltip, Screen
+    ToolTip, %TooltipMessage%, 0, 0
+    Sleep, 3000
+    ToolTip
+return
+
 BluetoothControl(DeviceName, Action){
     BluetoothDevices:=RegGetKeys("HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\BTHPORT\Parameters\Devices")
     Loop, % BluetoothDevices.MaxIndex()
@@ -85,6 +103,8 @@ BluetoothControl(DeviceName, Action){
 }
 if (DeviceNumber=0){
     Run, powershell -command .\bluetooth.ps1 -BluetoothStatus Off, %A_ScriptDir%, Hide
+    TooltipMessage=Bluetooth Disconnected
+    SetTimer, ShowTooltip, -1
 } else {
     IniRead, DeviceName, %A_ScriptDir%\bluetooth.ini, Settings, DeviceName.%DeviceNumber%,0
     if (DeviceName){
@@ -95,6 +115,7 @@ if (DeviceNumber=0){
                 ; msgbox, %PrevDeviceName%
                 RunWait, powershell -command .\devcon_admin.ps1 -DeviceName '%PrevDeviceName%' -Disable 1, %A_ScriptDir%, Hide
                 BluetoothControl(PrevDeviceName, "Disable")
+                RestartService()
                 ; RunWait, powershell -command .\devcon_admin.ps1 -DeviceName '%PrevDeviceName%' -Disable 1 -Pause 1, %A_ScriptDir%, Max
                 RunWait, powershell -command .\bluetooth.ps1 -BluetoothStatus Off, %A_ScriptDir%, Hide
             }
@@ -103,8 +124,12 @@ if (DeviceNumber=0){
         IniWrite, %DeviceNumber%, %A_ScriptDir%\bluetooth.ini, Settings, DeviceNumber
         IniWrite, %DeviceName%, %A_ScriptDir%\bluetooth.ini, Settings, DeviceName.%DeviceNumber%
         BluetoothControl(DeviceName, "Enable")
+        RestartService()
         RunWait, powershell -command .\bluetooth.ps1 -BluetoothStatus On, %A_ScriptDir%, Hide
         RunWait, powershell -command .\devcon_admin.ps1 -DeviceName '%DeviceName%', %A_ScriptDir%, Hide
         ; RunWait, powershell -command .\devcon_admin.ps1 -DeviceName '%DeviceName%' -Pause 1, %A_ScriptDir%, Max
+        TooltipMessage=Bluetooth %DeviceName% Connected
+        SetTimer, ShowTooltip, -1
     }
 }
+Sleep, 10000
