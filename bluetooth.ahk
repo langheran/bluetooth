@@ -1,3 +1,5 @@
+#SingleInstance force
+
 ; create bluetooth folder if not exists
 if not FileExist(A_ScriptDir "\bluetooth")
     FileCreateDir, %A_ScriptDir%\bluetooth
@@ -68,13 +70,6 @@ RegExport(RegPath, OutputFile) {
     RunWait, regedit /e "%OutputFile%" "%RegPath%"
 }
 
-ShowTooltip:
-    CoordMode, Tooltip, Screen
-    ToolTip, %TooltipMessage%, 0, 0
-    Sleep, 3000
-    ToolTip
-return
-
 BluetoothControl(DeviceName, Action){
     BluetoothDevices:=RegGetKeys("HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\BTHPORT\Parameters\Devices")
     Loop, % BluetoothDevices.MaxIndex()
@@ -99,7 +94,7 @@ BluetoothControl(DeviceName, Action){
         }
     }
 }
-msgbox, %DeviceNumber%
+
 if (DeviceNumber=0){
     Run, powershell -command .\bluetooth.ps1 -BluetoothStatus Off, %A_ScriptDir%, Hide
     TooltipMessage=Bluetooth Disconnected
@@ -133,3 +128,11 @@ if (DeviceNumber=0){
 }
 RestartService()
 Sleep, 10000
+return
+
+ShowTooltip:
+    CoordMode, Tooltip, Screen
+    ToolTip, %TooltipMessage%, 0, 0
+    Sleep, 3000
+    ToolTip
+return
