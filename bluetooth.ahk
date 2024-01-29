@@ -1,5 +1,9 @@
 #SingleInstance force
 
+#Include RunAsTask.ahk
+TaskName := ""
+TaskName := RunAsTask(isSingeInstance:=1)
+
 ; create bluetooth folder if not exists
 if not FileExist(A_ScriptDir "\bluetooth")
     FileCreateDir, %A_ScriptDir%\bluetooth
@@ -67,6 +71,9 @@ BinaryToString(BinaryData){
     return StringFromBinary
 }
 RegExport(RegPath, OutputFile) {
+    if FileExist(OutputFile){
+        FileDelete, %OutputFile%
+    }
     RunWait, regedit /e "%OutputFile%" "%RegPath%"
 }
 
@@ -94,7 +101,7 @@ BluetoothControl(DeviceName, Action){
         }
     }
 }
-
+PrevDeviceName:=""
 if (DeviceNumber=0){
     Run, powershell -command .\bluetooth.ps1 -BluetoothStatus Off, %A_ScriptDir%, Hide
     TooltipMessage=Bluetooth Disconnected
@@ -127,6 +134,9 @@ if (DeviceNumber=0){
     }
 }
 RestartService()
+if (PrevDeviceName){
+    BluetoothControl(PrevDeviceName, "Enable")
+}
 Sleep, 10000
 return
 
